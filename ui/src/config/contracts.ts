@@ -1,4 +1,4 @@
-const contractAddress = import.meta.env.VITE_ENCRYPTED_QUIZ_ADDRESS;
+const contractAddress = "0xe32832d61D046444376741dc8575FD0E14fB594b"
 
 if (!contractAddress) {
   console.warn('VITE_ENCRYPTED_QUIZ_ADDRESS is not set. The quiz will not be able to submit answers.');

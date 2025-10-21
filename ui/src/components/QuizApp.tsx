@@ -18,6 +18,24 @@ type Question = {
 const QUESTION_IDS = [0n, 1n];
 const ZERO_HANDLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
+function extractContractResult<T>(item: unknown): T | undefined {
+  if (Array.isArray(item)) {
+    return item as unknown as T;
+  }
+  if (
+    typeof item === 'string' ||
+    typeof item === 'number' ||
+    typeof item === 'bigint' ||
+    typeof item === 'boolean'
+  ) {
+    return item as T;
+  }
+  if (item && typeof item === 'object' && 'result' in item && (item as { result?: unknown }).result !== undefined) {
+    return (item as { result?: unknown }).result as T;
+  }
+  return undefined;
+}
+
 export function QuizApp() {
   const { address } = useAccount();
   const signer = useEthersSigner();
@@ -31,6 +49,7 @@ export function QuizApp() {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const { data: questionsData } = useReadContracts({
+    allowFailure: false,
     contracts: QUESTION_IDS.map((questionId) => ({
       address: QUIZ_ADDRESS,
       abi: QUIZ_ABI,
@@ -44,17 +63,24 @@ export function QuizApp() {
       return [];
     }
 
-    return questionsData.map((item) => {
-      const [prompt, optionOne, optionTwo, rewardRaw] = item as readonly [string, string, string, bigint];
-      return {
-        prompt,
-        options: [optionOne, optionTwo],
-        reward: Number(rewardRaw),
-      };
-    });
+    return questionsData
+      .map((item) => {
+        const tuple = extractContractResult<readonly [string, string, string, bigint]>(item);
+        if (!tuple) {
+          return undefined;
+        }
+        const [prompt, optionOne, optionTwo, rewardRaw] = tuple;
+        return {
+          prompt,
+          options: [optionOne, optionTwo],
+          reward: Number(rewardRaw),
+        };
+      })
+      .filter((value): value is Question => Boolean(value));
   }, [questionsData]);
 
   const { data: answeredData, refetch: refetchAnswered } = useReadContracts({
+    allowFailure: false,
     contracts: address
       ? QUESTION_IDS.map((questionId) => ({
           address: QUIZ_ADDRESS,
@@ -72,10 +98,11 @@ export function QuizApp() {
     if (!answeredData) {
       return QUESTION_IDS.map(() => false);
     }
-    return answeredData.map((item) => Boolean(item));
+    return answeredData.map((item) => Boolean(extractContractResult<boolean>(item)));
   }, [answeredData]);
 
   const { data: encryptedResultsData, refetch: refetchResults } = useReadContracts({
+    allowFailure: false,
     contracts: address
       ? QUESTION_IDS.map((questionId) => ({
           address: QUIZ_ADDRESS,
@@ -93,7 +120,10 @@ export function QuizApp() {
     if (!encryptedResultsData) {
       return QUESTION_IDS.map(() => ZERO_HANDLE);
     }
-    return encryptedResultsData.map((item) => String(item));
+    return encryptedResultsData.map((item) => {
+      const value = extractContractResult<string>(item);
+      return value ?? ZERO_HANDLE;
+    });
   }, [encryptedResultsData]);
 
   const { data: encryptedScore, refetch: refetchScore } = useReadContract({
