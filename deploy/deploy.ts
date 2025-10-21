@@ -8,6 +8,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
+  const privateKey = process.env.PRIVATE_KEY;
+  if (!privateKey) {
+    throw new Error("PRIVATE_KEY is not set. Deployment requires a funded signer private key.");
+  }
+
   const deployedQuiz = await deploy("EncryptedGameQuiz", {
     from: deployer,
     log: true,
