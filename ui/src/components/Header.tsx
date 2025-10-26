@@ -7,7 +7,7 @@ export function Header() {
       <div className="header-container">
         <div className="header-content">
           <div className="header-left">
-            <h1 className="header-title">FHE Quiz</h1>
+            <h1 className="header-title">FHE RPG</h1>
             <p className="header-subtitle">Answer encrypted questions and earn secret points.</p>
           </div>
           <ConnectButton />
